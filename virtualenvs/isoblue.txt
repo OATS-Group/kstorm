@@ -1,0 +1,6 @@
+streamparse # always required for streamparse projects
+pykafka
+simplejson
+kazoo
+avro
+avro_json_serializer
