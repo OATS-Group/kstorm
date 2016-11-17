@@ -1,14 +1,21 @@
 """
-Word count topology
+isoblue topology
 """
 
 from streamparse import Grouping, Topology
 
-from bolts.kafkaWriterBolt import KafkaWriterBolt
-from spouts.kafkaReaderSpout import KafkaReaderSpout 
+from spouts.ibengSpout import IbengSpout 
+from spouts.ibimpSpout import IbimpSpout 
+
+from bolts.isobusBolt import IsobusBolt
+from bolts.engineRpmBolt import EngineRpmBolt
+from bolts.ptoRpmBolt import PtoRpmBolt
 
 class isoblue(Topology):
 
-    kafka_spout = KafkaReaderSpout.spec(name='kafka_spout')
-    kafka_bolt = KafkaWriterBolt.spec(name='kafka_bolt', \
-                                      inputs={kafka_spout: Grouping.fields('data')})
+    ibeng_spout = IbengSpout.spec()
+    ibimp_spout = IbimpSpout.spec()
+
+    isobus_bolt = IsobusBolt.spec(inputs=[ibeng_spout, ibimp_spout])
+    engrpm_bolt = EngineRpmBolt.spec(inputs={isobus_bolt['engrpm']: Grouping.SHUFFLE})
+    ptorpm_bolt = PtoRpmBolt.spec(inputs={isobus_bolt['ptorpm']: Grouping.SHUFFLE})

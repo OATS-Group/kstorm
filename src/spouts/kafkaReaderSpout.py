@@ -2,8 +2,6 @@ import logging
 import time
 import io
 
-import simplejson as json
-
 # zookeeper
 from kazoo.client import KazooClient
 
@@ -14,15 +12,7 @@ from pykafka.common import OffsetType
 # storm
 from streamparse.spout import Spout
 
-# avro
-import avro.schema
-import avro.io
-
-# avro to json
-from avro_json_serializer import AvroJsonSerializer
-
 log = logging.getLogger(__name__)
-schema_path = '/home/yang/source/kstorm/raw_can.avsc'
 
 class KafkaReaderSpout(Spout):
     """Generic reader spout for Kafka queues.
@@ -46,10 +36,8 @@ class KafkaReaderSpout(Spout):
 
     def initialize(self, stormconf, context):
         self._counter = 0
-        self._statsd = None
 
         # kafka stuff
-        self.topic_name = 'ibeng'
         self.consumer_group = 'stormtest'
         self.kafka_hosts = 'localhost:9092'
         self.zookeeper_hosts = 'localhost:2181'
@@ -57,9 +45,6 @@ class KafkaReaderSpout(Spout):
 
         # initialize the consumer
         self.consumer = self.initializeKafka()
-
-        # load avro schema
-        self.schema = avro.schema.parse(open(schema_path).read())
 
     def initializeKafka(self):
         # connect to zookeeper
@@ -70,17 +55,17 @@ class KafkaReaderSpout(Spout):
         client = KafkaClient(hosts=self.kafka_hosts)
         topic = client.topics[self.topic_name]
         consumer = topic.get_balanced_consumer(consumer_group=self.consumer_group,
-                                                consumer_timeout_ms=100,
-                                                rebalance_max_retries=30,
-                                                auto_offset_reset=OffsetType.EARLIEST,
-                                                auto_commit_enable=False,
-                                                zookeeper=zk)
+                                               consumer_timeout_ms=100,
+                                               rebalance_max_retries=30,
+                                               auto_offset_reset=OffsetType.EARLIEST,
+                                               auto_commit_enable=False,
+                                               zookeeper=zk)
 
         return consumer
 
-    def get_data(self, unpacked):
+    def get_data(self, msg):
         """Get list of data to emit. Override to change what's sent out"""
-        return [unpacked]
+        return [msg]
 
     def get_stream(self, data):
         """Get the output stream for the tuple, based on the unpacked data."""
@@ -99,26 +84,20 @@ class KafkaReaderSpout(Spout):
         few seconds before emitting multiple messages to Storm. In theory,
         this could provide performance benefits.
         """
-        if self._statsd:
-            self._statsd.incr('calls.emit_next', sample_rate=0.01)
         msg = self.consumer.consume()
         if not msg:
             # nothing here
             return
 
         try:
-            bytes_reader = io.BytesIO(msg.value)
-            decoder = avro.io.BinaryDecoder(bytes_reader)
-            reader = avro.io.DatumReader(self.schema)
-            decoded_data = reader.read(decoder)
-            serializer = AvroJsonSerializer(self.schema)
-            unpacked = serializer.to_json(decoded_data)
+            data = self.get_data(msg.value)
         except:
-            log.error('Error in unpacking message: %s', msg)
+            log.error('Error in unpacking data: %r', msg.value)
+            raise
             # drop the tuple
             return
-        if self.is_ok(unpacked):
-            data = self.get_data(unpacked)
+
+        if self.is_ok(data):
             stream = self.get_stream(data)
             self.emit_tuple(data, stream=stream)
         else:
@@ -126,8 +105,6 @@ class KafkaReaderSpout(Spout):
 
     def emit_tuple(self, values, stream=None):
         """Attach and id and emit a list/tuple to Storm"""
-        if self._statsd:
-            self._statsd.incr('calls.emit_tuple', sample_rate=0.01)
         if self._counter == 0:
             # this is the first tuple, we like to sleep for
             # a few seconds to ensure that async connections
@@ -138,6 +115,4 @@ class KafkaReaderSpout(Spout):
 
     def next_tuple(self):
         """Called by Storm to get the next tuple"""
-        if self._statsd:
-            self._statsd.incr('calls.next_tuple', sample_rate=0.01)
         self.emit_next()
