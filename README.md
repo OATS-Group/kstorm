@@ -1,11 +1,8 @@
-* Setup virtualenv
+To run:
 
 	$ virtualenv venv
 	$ source venv/bin/activate
 	$ sudo pip install -r requirements.txt
-
-* In the virtualenv, to run:
-
 	$ mkdir data
 	$ sparse run
 
