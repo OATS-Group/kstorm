@@ -31,6 +31,6 @@ class IsobusBolt(Bolt):
         self.logger.debug('Tuple PGN: %d', tup_pgn)
 
         if tup_pgn in self.pgns:
-            self.logger.info('PGN matches: %d, will go to stream: %s', \
+            self.logger.debug('PGN matches: %d, will go to stream: %s', \
                              tup_pgn, self.pgns[tup_pgn]) 
             self.emit([parsed_message], stream=self.pgns[tup_pgn])

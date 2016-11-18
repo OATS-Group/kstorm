@@ -1,3 +1,5 @@
+import os
+
 # zookeeper
 from kazoo.client import KazooClient
 
@@ -17,6 +19,8 @@ class KafkaWriterBolt(Bolt):
 
         # initialize the producer 
         self.producer = self.initializeKafka()
+
+        self.pid = os.getpid()
 
     def initializeKafka(self):
 

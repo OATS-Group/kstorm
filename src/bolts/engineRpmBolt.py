@@ -1,11 +1,19 @@
-import os
+from bolts.kafkaWriterBolt import KafkaWriterBolt
 
-from streamparse.bolt import Bolt
+class EngineRpmBolt(KafkaWriterBolt):
 
-class EngineRpmBolt(Bolt):
-    
-    def initialize(self, conf, ctx):
-        self.pid = os.getpid()
+    def __init__(self, *args, **kwargs):
+
+        super(EngineRpmBolt, self).__init__(*args, **kwargs)
+        self.topic_name = 'engrpm'
 
     def process(self, tup):
-        self.logger.info(tup.values.data)
+
+        data = tup.values.data['payload_bytes']
+        data = [x.encode('utf-8') for x in data]
+        self.logger.debug(data)
+        engrpm_bytes = b''.join((data[4], data[3]))
+        engrpm = int(engrpm_bytes, 16) * 0.125
+
+        self.producer.produce(str(tup.values.data['timestamp']) + ',' + \
+                              str(engrpm))

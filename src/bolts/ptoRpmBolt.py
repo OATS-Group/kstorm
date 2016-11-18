@@ -8,4 +8,4 @@ class PtoRpmBolt(Bolt):
         self.pid = os.getpid()
 
     def process(self, tup):
-        self.logger.info(tup.values.data)
+        self.logger.debug(tup.values.data)

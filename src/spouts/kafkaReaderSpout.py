@@ -38,7 +38,7 @@ class KafkaReaderSpout(Spout):
         self._counter = 0
 
         # kafka stuff
-        self.consumer_group = 'stormtest'
+        self.consumer_group = 'kstorm'
         self.kafka_hosts = 'localhost:9092'
         self.zookeeper_hosts = 'localhost:2181'
         self.offset_reset = 'earliest'
